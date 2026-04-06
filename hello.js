@@ -1,7 +1,5 @@
 function setup() {
- helllooooooo
- update here :P
- kaylee's updates :P
+    createCanvas(1280, 720); // dimensions for most laptop screens (in pixels)
 }
 
 
