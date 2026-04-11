@@ -730,13 +730,70 @@ function drawCombatLog() {
 function drawWinScreen() {
     // win screen :)
     drawTerminalFrame();
-    // DO THIS LATER
+    
+    // top bar
+    fill(GOLD);
+    textAlign(LEFT, TOP);
+    textSize(20);
+    text("LEVEL ONE", 20, 12);
+    
+    fill(LIGHT);
+    text("HP:" + player.hp, 235, 12);
+    text("LIVES:" + player.lives, 360, 12);
+    
+    // decorative divider line
+    stroke(TEAL);
+    line(0, 42, width, 42);
+    noStroke();
+    
+    // main body
+    textAlign(CENTER, CENTER);
+    text("LEVEL ONE", width / 2, height / 2 - 60);
+    
+    fill(LIGHT);
+    textSize(16);
+    text("YOU DEFEATED THE DRAGON", width / 2, height / 2 - 20);
+    
+    // extra options (purely visual/for the vibes for now)
+    fill(TEAL);
+    text("> ADVANCE TO LEVEL 2", width / 2, height / 2 + 20);
+    text("> QUIT", width / 2, height / 2 + 50);
 }
 
 function drawLoseScreen() {
     // lose screen :(
     drawTerminalFrame();
-    // DO THIS LATER
+    
+    // top bar
+    fill(GOLD);
+    textAlign(LEFT, TOP);
+    textSize(20);
+    text("LEVEL ONE", 20, 12);
+    
+    fill(LIGHT);
+    text("HP:" + player.hp, 235, 12); // should be zero but just in case :)
+    text("LIVES:" + player.lives, 360, 12);
+    
+    // decorative divider line
+    stroke(TEAL);
+    line(0, 42, width, 42);
+    noStroke();
+    
+    // main body
+    textAlign(CENTER, CENTER);
+    
+    fill(GOLD);
+    textSize(24);
+    text("LEVEL ONE", width / 2, height / 2 - 60);
+    
+    fill(LIGHT);
+    textSize(16);
+    text("YOU LOST", width / 2, height / 2 - 20);
+    
+    // extra options (also just visual for now)
+    fill(TEAL);
+    text("> RESTART", width / 2, height / 2 + 20);
+    text("> QUIT", width / 2, height / 2 + 50);
 }
 
 // --------------------------------------------------
