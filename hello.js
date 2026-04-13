@@ -1,7 +1,7 @@
 /*
-    Crash of Campaigns - Prototype (V1)
+    Crash of Campaigns - Prototype (V1) Dev Notes
     --------------------------------
-    Crash of Campaigns is a simple p5.js (prototype atm) for a retro terminal-style combat game
+    Crash of Campaigns is a simple p5.js for a retro terminal-style combat game
 
     FEATURES INCLUDED RN:
     - Title screen
@@ -11,11 +11,11 @@
     - Menu-based actions (the display looks a bit different from the mockup right now, 
     but the functionality is there and we can iterate on the design as we go :) )
     - Basic animations / feedback for the user's actions and enemy attacks
-
-    NEED TO ADD:
     - Win state
     - Lose state
-    - README.md file (idk note 3.)
+    - README.md file
+
+    NEED TO ADD:
     - .gitignore (maybe if necessary, if we end up with any files we don't want to track in git, but right now 
     since everything is just a few code and asset files it should be fine without one, but we can add it later if needed :P)
     
@@ -42,7 +42,13 @@
     2. another note: to run the game locally, i have an extension called "Live Server" that lets me run a local server and play the game in the browser,
     but you can also just open the index.html file in a web browser and it should work fine since all the assets are loaded locally and there are no external dependencies, 
     so it should be super easy to run on another computer without needing to set up anything fancy :)
-    3. also note: i'm gonna put this in a README file later but just putting it here for now - thats lowgurtgenuinely a lotta work 
+
+    Improvements for the future:
+    potentially moving around the design of the HP system to be more visual and less number-based, maybe with a health bar or something, to make it more intuitive and visually appealing for the player
+    improve spell mechanics by adding different types of spells with unique effects, such as healing spells, buffs/debuffs, or multi-turn spells that require strategic planning
+    and add more depth to combat.
+    make defend actually defend by reducing damage from enemy attacks more significantly, and maybe add a visual indicator that the player is defending
+    add level 2 with more complex enemy behvavior and possibly multiple enemies at once for more challenging and engaging combat scenarios
 
     HOW TO PLAY:
     - On title screen:
@@ -138,7 +144,7 @@ let attackImg;
 let spellImg;
 
 // Font asset
-let arcadeFont;
+let pixFont;
 
 // --------------------------------------------------
 // P5 PRELOAD
@@ -185,10 +191,11 @@ function preload() {
     // Load font
     // TrueType font (ttf) files can be finicky in p5.js
     // so again we'll use a safe loading method with callbacks to handle success and failure cases gracefully :)
-    arcadeFont = loadFont(
-        "assets/ARCADECLASSIC.ttf",
-        () => console.log("font loaded"),
-        (err) => console.error("font failed:", err)
+    // also the font is updated to pixelmix instead of Arcade Classic (cuz that one didn't have any special characters)
+    pixFont = loadFont(
+        "assets/pixelmix.ttf",
+        () => console.log("pix font loaded"),
+        (err) => console.error("pix font failed:", err)
     );
 }
 
@@ -196,8 +203,8 @@ function setup() {
     createCanvas(CANVAS_W, CANVAS_H);
 
     // Only use the custom font if it actually loaded
-    if (arcadeFont) {
-        textFont(arcadeFont);
+    if (pixFont) {
+        textFont(pixFont);
     } else {
         // if it doesn't work for some reason, we'll default to monospace and log an error, but the game will still be playable
         console.error("Custom font failed to load, using default monospace font");
