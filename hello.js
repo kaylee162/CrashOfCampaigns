@@ -1,125 +1,90 @@
 /*
-    Crash of Campaigns - Prototype (V1) Dev Notes
+    Crash of Campaigns - Prototype (V2) Dev Notes
     --------------------------------
-    Crash of Campaigns is a simple p5.js for a retro terminal-style combat game
+    This version keeps the same retro terminal-style battle prototype,
+    but expands the combat loop so it feels more tactical and a lot less one-note.
 
-    FEATURES INCLUDED RN:
-    - Title screen
-    - Instructions screen
-    - Main interaction loop
-    - Turn-based combat
-    - Menu-based actions (the display looks a bit different from the mockup right now, 
-    but the functionality is there and we can iterate on the design as we go :) )
-    - Basic animations / feedback for the user's actions and enemy attacks
-    - Win state
-    - Lose state
-    - README.md file
+    IMPROVEMENTS ADDED HERE:
+    - Real defend mechanic with a much stronger damage reduction
+    - Visible defense indicator on the player
+    - Healing command with limited uses (3 charges)
+    - Spell submenu with multiple spell types that all do super cool things
+    - Buffs / debuffs and a multi-turn charge spell
+    - Level 2 with multiple enemies on screen at once
+    - Target switching in multi-enemy encounters
+    - Slightly more interesting enemy behavior and status handling :)
 
-    NEED TO ADD:
-    - .gitignore (maybe if necessary, if we end up with any files we don't want to track in git, but right now 
-    since everything is just a few code and asset files it should be fine without one, but we can add it later if needed :P)
-    
-    POLISH THINGS: 
-    - More detailed instructions and feedback for player actions and enemy attacks
-    - More interesting enemy behavior and attack patterns
-    - also need to fix the display, its a bit wanky rn, but that will be a work in progress 
-    as we add more features and mechanics to the game :)
-    - More visual polish and effects to make the combat feel more impactful and satisfying
-    - Music and sound effects (maybe :P)
+    HOW THE NEW COMBAT FLOW WORKS:
+    - LEVEL 1 = one enemy encounter based on title selection
+    - LEVEL 2 = two enemies at once
+    - SPELL opens a submenu instead of doing just one generic spell
+    - HEAL is its own menu command with limited charges
+    - LEFT / RIGHT changes target when there are multiple living enemies
 
     BUGS:
-    NONE :) 
+    NONE so far :P
 
-    DEV NOTES:
-    i've been having a lot of trouble with loading and displaying images in p5.js for some reason, so for now the code is set up to handle image loading issues gracefully without breaking the sketch, 
-    and it will log helpful messages to the console for debugging. 
-    The drawImageSafe function is a helper that checks if an image loaded successfully before trying to draw it, 
-    and if not it will draw a placeholder rectangle and log an error message instead of breaking the sketch with a runtime error. 
-    This way we can still work on the game and test other features even if there are issues with the images, 
-    and we can easily identify and fix any problems with the assets by checking the console logs.
-
-    1. just a note: i couldn't figure out how to work Processing, so i lowkey just used VSCode
-    2. another note: to run the game locally, i have an extension called "Live Server" that lets me run a local server and play the game in the browser,
-    but you can also just open the index.html file in a web browser and it should work fine since all the assets are loaded locally and there are no external dependencies, 
-    so it should be super easy to run on another computer without needing to set up anything fancy :)
-
-    Improvements for the future:
-    potentially moving around the design of the HP system to be more visual and less number-based, maybe with a health bar or something, to make it more intuitive and visually appealing for the player
-    improve spell mechanics by adding different types of spells with unique effects, such as healing spells, buffs/debuffs, or multi-turn spells that require strategic planning
-    and add more depth to combat.
-    make defend actually defend by reducing damage from enemy attacks more significantly, and maybe add a visual indicator that the player is defending
-    add level 2 with more complex enemy behvavior and possibly multiple enemies at once for more challenging and engaging combat scenarios
-
-    HOW TO PLAY:
-    - On title screen:
-        W/S or UP/DOWN = move cursor
-        ENTER = select
-    - In battle:
-        W/S or UP/DOWN = move action cursor
-        ENTER = confirm action
-    - On win/lose screen:
-        ENTER = restart to title
+    NOTES:
+    Idk everythign is working fine now, layout still a bit wonky, but theres a lot of imporoved game logic
+    that really makes the game more complex
 */
 
 // --------------------------------------------------
 // GLOBAL GAME STATE
 // --------------------------------------------------
 
-// Finite state machine values
-// These match the structure you described in our milestone PDF:
-// title -> instructions or game -> win/lose
 let gameState = "TITLE";
+
+// Separate screen modes for the battle UI.
+// This lets SPELL open a small submenu without replacing the whole battle screen.
+let battleScreenMode = "COMMAND"; // "COMMAND" or "SPELL_MENU"
 
 // Menu cursor positions
 let titleMenuIndex = 0;
 let battleMenuIndex = 0;
+let spellMenuIndex = 0;
 
-// Title screen menu options
 const titleOptions = [
     "VIEW INSTRUCTIONS",
     "PLAY GAME"
 ];
 
-// Battle command options
+// Added HEAL as its own command so the player does not need to burn a spell slot just to recover HP.
 const battleOptions = [
     "ATTACK",
     "DEFEND",
-    "SPELL"
+    "SPELL",
+    "HEAL"
 ];
 
-// Player and enemy objects
+// Different spell types with distinct jobs.
+// This gives the combat some strategy instead of SPELL always meaning "bigger attack".
+const spellOptions = [
+    "FIREBLAST",   // Direct damage + burn over time
+    "WEAKEN",      // Debuff enemy attack for a few turns
+    "BARRIER",     // Defensive buff on the player
+    "STARFALL"     // Multi-turn spell that charges, then lands later
+];
+
 let player;
-let enemy;
-
-// Current enemy choice for this prototype.
-// You can switch between "DRAGON" and "OGRE"
+let enemies = [];
+let currentLevel = 1;
 let selectedEnemyType = "DRAGON";
+let activeTargetIndex = 0;
 
-// Combat message log shown in the lower section of the screen
 let combatLog = [];
-
-// Small timer so the enemy turn happens shortly after the player turn
-// This makes combat feel more alive than if everything happens instantly
 let enemyTurnTimer = 0;
-
-// If true, the player is defending this turn
-// The enemy attack will deal reduced damage if this is active, but it resets after one enemy hit
-let playerDefending = false;
-
-// Flash timers for very simple hit feedback
 let playerFlashTimer = 0;
-let enemyFlashTimer = 0;
-
-// Small animation timer for slash/spell effects
 let attackEffectTimer = 0;
-let attackEffectType = ""; // "ATTACK" or "SPELL"
+let attackEffectType = "";
+
+// This is the current action banner shown near the bottom right.
+let actionBanner = "";
 
 // --------------------------------------------------
 // VISUAL STYLE CONSTANTS
 // --------------------------------------------------
 
-// These are just some simple colors to keep the style consistent
-// yay colors!!
 const BG = "#000000";
 const GOLD = "#c6b96b";
 const TEAL = "#1f5c5d";
@@ -127,8 +92,9 @@ const BRIGHT_TEAL = "#2b8b8d";
 const LIGHT = "#a8b4ae";
 const RED = "#c65f5f";
 const GREEN = "#7abf88";
+const PURPLE = "#9a7fd1";
+const ORANGE = "#d58a45";
 
-// Canvas size based on your mockup proportions
 const CANVAS_W = 640;
 const CANVAS_H = 480;
 
@@ -136,28 +102,18 @@ const CANVAS_H = 480;
 // ASSET VARIABLES
 // --------------------------------------------------
 
-// Image assets
 let knightImg;
 let dragonImg;
 let ogreImg;
 let attackImg;
 let spellImg;
-
-// Font asset
 let pixFont;
 
 // --------------------------------------------------
 // P5 PRELOAD
 // --------------------------------------------------
-// preload() runs before setup().
-// It is the correct place to load images and fonts in p5.js.
-// This makes sure the files are ready before the game starts.
 
 function preload() {
-    // Load in the images from the assets folder
-    // lowkey having so much trouble with the images, so this is a super safe way to 
-    // load them that won't break the sketch if there's an issue with the files or paths, 
-    // and it will log helpful messages to the console for debugging
     knightImg = loadImage(
         "assets/knight.png",
         () => console.log("knight loaded"),
@@ -188,10 +144,6 @@ function preload() {
         (err) => console.error("spell failed:", err)
     );
 
-    // Load font
-    // TrueType font (ttf) files can be finicky in p5.js
-    // so again we'll use a safe loading method with callbacks to handle success and failure cases gracefully :)
-    // also the font is updated to pixelmix instead of Arcade Classic (cuz that one didn't have any special characters)
     pixFont = loadFont(
         "assets/pixelmix.ttf",
         () => console.log("pix font loaded"),
@@ -202,11 +154,9 @@ function preload() {
 function setup() {
     createCanvas(CANVAS_W, CANVAS_H);
 
-    // Only use the custom font if it actually loaded
     if (pixFont) {
         textFont(pixFont);
     } else {
-        // if it doesn't work for some reason, we'll default to monospace and log an error, but the game will still be playable
         console.error("Custom font failed to load, using default monospace font");
         textFont("monospace");
     }
@@ -217,60 +167,91 @@ function setup() {
 }
 
 // --------------------------------------------------
-// RESET FUNCTIONS
+// RESET / ENCOUNTER SETUP
 // --------------------------------------------------
+
 function resetGame() {
-    // Reset player stats
-    // these are the default values for the start of each game, 
-    // but we might modify them later for different levels or difficulty settings (maybe :P)
     player = {
         name: "PLAYER",
         hp: 100,
         maxHp: 100,
-        lives: 2
+        lives: 2,
+        defendTurns: 0,
+        barrierTurns: 0,
+        healUses: 3,
+        pendingSpell: null
     };
 
-    // Reset enemy based on selected type
-    setupEnemy(selectedEnemyType);
+    currentLevel = 1;
+    setupLevel(currentLevel);
 
-    // Reset combat values
     battleMenuIndex = 0;
+    spellMenuIndex = 0;
+    battleScreenMode = "COMMAND";
+    activeTargetIndex = 0;
     combatLog = [];
     enemyTurnTimer = 0;
-    playerDefending = false;
     playerFlashTimer = 0;
-    enemyFlashTimer = 0;
     attackEffectTimer = 0;
     attackEffectType = "";
+    actionBanner = "";
 
-    // Add some initial log messages 
     addLog("> SYSTEM READY");
     addLog("> ENCOUNTER LOADED");
-    addLog(`> ${enemy.name} APPEARS`);
+    addLog(`> LEVEL ${currentLevel} START`);
 }
 
-// This sets up the enemy stats based on the selected type
-function setupEnemy(type) {
-    if (type === "OGRE") {
-        enemy = {
-            type: "OGRE",
-            name: "OGRE",
-            hp: 70,
-            maxHp: 70,
-            minDamage: 10,
-            maxDamage: 18
-        };
+function setupLevel(levelNumber) {
+    currentLevel = levelNumber;
+
+    if (currentLevel === 1) {
+        enemies = [createEnemy(selectedEnemyType, 1)];
+        addLog(`> ${enemies[0].name} APPEARS`);
     } else {
-        enemy = {
-            // the dragon will be the more difficult enemy with higher HP and damage range
-            type: "DRAGON",
-            name: "DRAGON",
-            hp: 85,  
-            maxHp: 85, 
-            minDamage: 12,
-            maxDamage: 20
+        // Level 2 is intentionally busier.
+        // Two enemies on the field means the player has to think about target priority,
+        // defending, and whether to spend heal charges now or save them for later.
+        enemies = [
+            createEnemy("OGRE", 2),
+            createEnemy("DRAGON", 2)
+        ];
+        addLog("> MULTIPLE HOSTILES DETECTED");
+        addLog("> OGRE AND DRAGON ENTER BATTLE");
+    }
+
+    clampTargetToLivingEnemy();
+}
+
+function createEnemy(type, levelNumber) {
+    if (type === "OGRE") {
+        return {
+            type: "OGRE",
+            name: levelNumber === 1 ? "OGRE" : "OGRE BRUTE",
+            hp: levelNumber === 1 ? 70 : 95,
+            maxHp: levelNumber === 1 ? 70 : 95,
+            minDamage: levelNumber === 1 ? 10 : 12,
+            maxDamage: levelNumber === 1 ? 18 : 22,
+            weakTurns: 0,
+            burnTurns: 0,
+            flashTimer: 0,
+            chargingHeavy: false,
+            alive: true
         };
     }
+
+    return {
+        type: "DRAGON",
+        name: levelNumber === 1 ? "DRAGON" : "DRAGON WARDEN",
+        hp: levelNumber === 1 ? 85 : 110,
+        maxHp: levelNumber === 1 ? 85 : 110,
+        minDamage: levelNumber === 1 ? 12 : 14,
+        maxDamage: levelNumber === 1 ? 20 : 24,
+        weakTurns: 0,
+        burnTurns: 0,
+        flashTimer: 0,
+        chargingHeavy: false,
+        alive: true
+    };
 }
 
 // --------------------------------------------------
@@ -280,18 +261,20 @@ function setupEnemy(type) {
 function draw() {
     background(BG);
 
-    // Update simple timers each frame
     if (enemyTurnTimer > 0) enemyTurnTimer--;
     if (playerFlashTimer > 0) playerFlashTimer--;
-    if (enemyFlashTimer > 0) enemyFlashTimer--;
     if (attackEffectTimer > 0) attackEffectTimer--;
 
-    // Run enemy turn when timer expires
-    if (gameState === "PLAYING" && enemyTurnTimer === 1) {
-        handleEnemyTurn();
+    for (let i = 0; i < enemies.length; i++) {
+        if (enemies[i].flashTimer > 0) {
+            enemies[i].flashTimer--;
+        }
     }
 
-    // Draw based on current state
+    if (gameState === "PLAYING" && enemyTurnTimer === 1) {
+        handleEnemyTurnSequence();
+    }
+
     if (gameState === "TITLE") {
         drawTitleScreen();
     } else if (gameState === "INSTRUCTIONS") {
@@ -310,179 +293,460 @@ function draw() {
 // --------------------------------------------------
 
 function keyPressed() {
-    // Handle input based on current state
-    // We are just going to use seperate functions to handle these for cleanliness
-    if (gameState === "TITLE") { 
-        // Title screen input
+    if (gameState === "TITLE") {
         handleTitleInput();
-    } else if (gameState === "INSTRUCTIONS") { 
-        // Instructions screen input
+    } else if (gameState === "INSTRUCTIONS") {
         handleInstructionsInput();
-    } else if (gameState === "PLAYING") { 
-        // Battle screen input
+    } else if (gameState === "PLAYING") {
         handleBattleInput();
-    } else if (gameState === "WIN" || gameState === "LOSE") { 
-        // Win/Lose screen input
+    } else if (gameState === "WIN" || gameState === "LOSE") {
         handleEndInput();
     }
 }
 
-// Title screen input handling, including menu navigation and enemy selection
 function handleTitleInput() {
-    // Menu navigation
     if (keyCode === UP_ARROW || key === "w" || key === "W") {
-        titleMenuIndex = max(0, titleMenuIndex - 1); // Keep index within bounds of menu options
+        titleMenuIndex = max(0, titleMenuIndex - 1);
     } else if (keyCode === DOWN_ARROW || key === "s" || key === "S") {
-        titleMenuIndex = min(titleOptions.length - 1, titleMenuIndex + 1); // Keep index within bounds of menu options
+        titleMenuIndex = min(titleOptions.length - 1, titleMenuIndex + 1);
     }
 
-    // Optional enemy selection on title screen
     if (keyCode === LEFT_ARROW || key === "a" || key === "A") {
-        selectedEnemyType = "OGRE"; // Change to ogre if left arrow or A is pressed
+        selectedEnemyType = "OGRE";
     } else if (keyCode === RIGHT_ARROW || key === "d" || key === "D") {
-        selectedEnemyType = "DRAGON"; // Change to dragon if right arrow or D is pressed
+        selectedEnemyType = "DRAGON";
     }
 
-    // Confirm selection
     if (keyCode === ENTER || keyCode === RETURN) {
         if (titleMenuIndex === 0) {
-        gameState = "INSTRUCTIONS"; // Go to instructions
+            gameState = "INSTRUCTIONS";
         } else if (titleMenuIndex === 1) {
-        resetGame(); // Reset game state for new playthrough
-        gameState = "PLAYING"; // Start the game
+            resetGame();
+            gameState = "PLAYING";
         }
     }
 }
 
 function handleInstructionsInput() {
-  // Any Enter or Escape returns to title
     if (keyCode === ENTER || keyCode === RETURN || keyCode === ESCAPE) {
-        gameState = "TITLE"; // Return to title screen
+        gameState = "TITLE";
     }
 }
 
 function handleBattleInput() {
-    // Do not allow player input while waiting for enemy turn
     if (enemyTurnTimer > 0) return;
 
-    if (keyCode === UP_ARROW || key === "w" || key === "W") {
-        battleMenuIndex = max(0, battleMenuIndex - 1); // Move cursor up, keeping within bounds of battle options
-    } else if (keyCode === DOWN_ARROW || key === "s" || key === "S") {
-        battleMenuIndex = min(battleOptions.length - 1, battleMenuIndex + 1); // Move cursor down, keeping within bounds of battle options
-    }
-
-    if (keyCode === ENTER || keyCode === RETURN) {
-        const chosenAction = battleOptions[battleMenuIndex]; // Get the action corresponding to the current cursor position
-        handlePlayerAction(chosenAction); // Process the player's chosen action (attack, defend, or spell)
-    }
-}
-
-// Input handling for win/lose screens - just return to title on Enter
-function handleEndInput() {
-  if (keyCode === ENTER || keyCode === RETURN) {
-    gameState = "TITLE"; // Return to title screen
-    titleMenuIndex = 0; // Reset title menu cursor to default
-  }
-}
-
-// --------------------------------------------------
-// COMBAT LOGIC
-// --------------------------------------------------
-
-function handlePlayerAction(action) {
-    // Basic attack with random damage in a range
-    if (action === "ATTACK") { 
-        const dmg = floor(random(8, 15)); // Random damage between 8 and 14 (can change if necessary :P)
-        enemy.hp = max(0, enemy.hp - dmg); // Reduce enemy HP but not below 0 
-        enemyFlashTimer = 12; // Start flash timer for hit feedback
-        attackEffectTimer = 20; // Start timer for attack effect animation
-        attackEffectType = "ATTACK"; // Set effect type to attack for drawing the correct animation
-
-        addLog("> PLAYER ATTACKED"); // Log the attack action
-        addLog(`> ${enemy.name} -${dmg} HP`); // Log the damage dealt to the enemy
-    }
-
-    else if (action === "DEFEND") {
-        // Basic defend action - sets a flag that will reduce damage from the next enemy attack, but resets after one hit
-        playerDefending = true; // Set defending flag to true so that the enemy turn can check this and reduce damage accordingly
-        addLog("> PLAYER DEFENDED"); // Log the defend action
-        addLog("> DAMAGE WILL BE REDUCED"); // Log the effect of defending for player clarity
-    }
-
-    else if (action === "SPELL") {
-        // Basic spell action - higher damage than attack but with a chance to miss
-        const spellHit = random() < 0.8; // 80% chance to hit, 20% chance to miss (we might adjust these values for balance later)
-
-        if (spellHit) {
-            // If the spell hits, deal higher damage than a normal attack 
-            // we might adjust the damage range and hit chance later 
-            const dmg = floor(random(12, 22)); // Random damage between 12 and 21 (can change if necessary :P)
-            enemy.hp = max(0, enemy.hp - dmg); // Reduce enemy HP but not below 0
-            enemyFlashTimer = 12;  // Start flash timer for hit feedback
-            attackEffectTimer = 20;  // Start timer for spell effect animation
-            attackEffectType = "SPELL"; // Set effect type to spell for drawing the correct animation
-
-            addLog("> PLAYER CAST SPELL"); // Log the spell action
-            addLog(`> ${enemy.name} -${dmg} HP`); // Log the damage dealt to the enemy
-        } else {
-            addLog("> PLAYER CAST SPELL"); // Log the spell action even if it misses for consistency
-            addLog("> SPELL MISSED"); // Log the miss so the player knows their action was processed but just didn't hit
+    // Target switching only matters when there is more than one living enemy.
+    if (battleScreenMode === "COMMAND") {
+        if (keyCode === LEFT_ARROW || key === "a" || key === "A") {
+            moveTarget(-1);
+            return;
+        } else if (keyCode === RIGHT_ARROW || key === "d" || key === "D") {
+            moveTarget(1);
+            return;
         }
     }
 
-    // Check for win immediately after player turn
-    if (enemy.hp <= 0) {
-        gameState = "WIN"; // win state yay!
-        return; // we return here to avoid starting the enemy turn timer since the game is already won
+    if (battleScreenMode === "SPELL_MENU") {
+        handleSpellMenuInput();
+        return;
     }
 
-    // Delay enemy turn slightly so it feels like alternating turns
+    if (keyCode === UP_ARROW || key === "w" || key === "W") {
+        battleMenuIndex = max(0, battleMenuIndex - 1);
+    } else if (keyCode === DOWN_ARROW || key === "s" || key === "S") {
+        battleMenuIndex = min(battleOptions.length - 1, battleMenuIndex + 1);
+    }
+
+    if (keyCode === ENTER || keyCode === RETURN) {
+        const chosenAction = battleOptions[battleMenuIndex];
+
+        if (chosenAction === "SPELL") {
+            battleScreenMode = "SPELL_MENU";
+            spellMenuIndex = 0;
+        } else {
+            handlePlayerAction(chosenAction);
+        }
+    }
+}
+
+function handleSpellMenuInput() {
+    if (keyCode === UP_ARROW || key === "w" || key === "W") {
+        spellMenuIndex = max(0, spellMenuIndex - 1);
+    } else if (keyCode === DOWN_ARROW || key === "s" || key === "S") {
+        spellMenuIndex = min(spellOptions.length - 1, spellMenuIndex + 1);
+    }
+
+    if (keyCode === ESCAPE) {
+        battleScreenMode = "COMMAND";
+        return;
+    }
+
+    if (keyCode === ENTER || keyCode === RETURN) {
+        const chosenSpell = spellOptions[spellMenuIndex];
+        handleSpellAction(chosenSpell);
+        battleScreenMode = "COMMAND";
+    }
+}
+
+function handleEndInput() {
+    if (keyCode === ENTER || keyCode === RETURN) {
+        gameState = "TITLE";
+        titleMenuIndex = 0;
+    }
+}
+
+// --------------------------------------------------
+// COMBAT HELPERS
+// --------------------------------------------------
+
+function getActiveEnemy() {
+    clampTargetToLivingEnemy();
+    return enemies[activeTargetIndex];
+}
+
+function getLivingEnemies() {
+    return enemies.filter((enemy) => enemy.alive && enemy.hp > 0);
+}
+
+function allEnemiesDefeated() {
+    return getLivingEnemies().length === 0;
+}
+
+function clampTargetToLivingEnemy() {
+    const living = getLivingEnemies();
+    if (living.length === 0) return;
+
+    if (!enemies[activeTargetIndex] || !enemies[activeTargetIndex].alive) {
+        for (let i = 0; i < enemies.length; i++) {
+            if (enemies[i].alive) {
+                activeTargetIndex = i;
+                return;
+            }
+        }
+    }
+}
+
+function moveTarget(direction) {
+    if (getLivingEnemies().length <= 1) return;
+
+    let tries = 0;
+    let newIndex = activeTargetIndex;
+
+    while (tries < enemies.length) {
+        newIndex = (newIndex + direction + enemies.length) % enemies.length;
+        if (enemies[newIndex].alive) {
+            activeTargetIndex = newIndex;
+            addLog(`> TARGET: ${enemies[newIndex].name}`);
+            return;
+        }
+        tries++;
+    }
+}
+
+function damageEnemy(enemy, dmg, logPrefix = "> HIT") {
+    enemy.hp = max(0, enemy.hp - dmg);
+    enemy.flashTimer = 12;
+    addLog(logPrefix);
+    addLog(`> ${enemy.name} -${dmg} HP`);
+
+    if (enemy.hp <= 0) {
+        enemy.alive = false;
+        addLog(`> ${enemy.name} DOWN`);
+        clampTargetToLivingEnemy();
+    }
+}
+
+function healPlayer(amount) {
+    const oldHp = player.hp;
+    player.hp = min(player.maxHp, player.hp + amount);
+    const healed = player.hp - oldHp;
+    addLog("> HEAL PROTOCOL ACTIVATED");
+    addLog(`> PLAYER +${healed} HP`);
+}
+
+function queueEnemyPhase() {
+    if (allEnemiesDefeated()) {
+        finishEncounterOrAdvance();
+        return;
+    }
+
     enemyTurnTimer = 45;
 }
 
-function handleEnemyTurn() {
-    addLog(`> ${enemy.name} INITIATED ATTACK`); // Log the start of the enemy turn
-
-    let dmg = floor(random(enemy.minDamage, enemy.maxDamage + 1)); // Random damage within the enemy's damage range (max is exclusive in random, so we add 1 to make it inclusive :) )
-
-    // If player defended, reduce incoming damage
-    if (playerDefending) {
-        dmg = floor(dmg * 0.5); // Reduce damage by 50% if defending (we can adjust this multiplier for balance later)
-        addLog("> DEFENSE REDUCED DAMAGE"); // Log the effect of defending for player clarity
+function finishEncounterOrAdvance() {
+    if (currentLevel === 1) {
+        addLog("> LEVEL ONE CLEARED");
+        currentLevel = 2;
+        setupLevel(2);
+        player.hp = min(player.maxHp, player.hp + 20);
+        addLog("> PLAYER STABILIZED +20 HP");
+        return;
     }
 
-    player.hp -= dmg; // Apply damage to player HP
-    playerFlashTimer = 12; // Start flash timer for hit feedback
-    addLog("> PLAYER HIT"); // Log that the player was hit
-    addLog(`> PLAYER -${dmg} HP`); // Log the damage dealt to the player
+    gameState = "WIN";
+}
 
-    // Reset defend after one enemy hit
-    playerDefending = false;
+function processPlayerStartOfTurnEffects() {
+    // STARFALL is the multi-turn spell.
+    // On the turn after casting, it lands automatically before the player picks a command.
+    if (player.pendingSpell === "STARFALL") {
+        const target = getActiveEnemy();
+        if (target) {
+            const dmg = floor(random(18, 31));
+            attackEffectTimer = 24;
+            attackEffectType = "STARFALL";
+            addLog("> STARFALL RESOLVES");
+            damageEnemy(target, dmg, "> COSMIC IMPACT");
+        }
+        player.pendingSpell = null;
+    }
+}
 
-    // If player HP drops to 0 or lower, lose a life
+function processEnemyStatusEffects(enemy) {
+    if (!enemy.alive) return;
+
+    if (enemy.burnTurns > 0) {
+        const burnDamage = 5;
+        enemy.burnTurns--;
+        addLog(`> ${enemy.name} BURNING`);
+        damageEnemy(enemy, burnDamage, "> BURN DAMAGE");
+    }
+
+    if (enemy.weakTurns > 0 && enemy.alive) {
+        enemy.weakTurns--;
+        if (enemy.weakTurns === 0) {
+            addLog(`> ${enemy.name} RECOVERS`);
+        }
+    }
+}
+
+// --------------------------------------------------
+// COMBAT ACTIONS
+// --------------------------------------------------
+
+function handlePlayerAction(action) {
+    processPlayerStartOfTurnEffects();
+    if (allEnemiesDefeated()) {
+        finishEncounterOrAdvance();
+        return;
+    }
+
+    const target = getActiveEnemy();
+    if (!target) return;
+
+    if (action === "ATTACK") {
+        const dmg = floor(random(8, 15));
+        attackEffectTimer = 20;
+        attackEffectType = "ATTACK";
+        actionBanner = "SLASH";
+        addLog("> PLAYER ATTACKED");
+        damageEnemy(target, dmg);
+    }
+
+    else if (action === "DEFEND") {
+        // This is a much stronger defend than before.
+        // defendTurns handles the next enemy phase, while barrierTurns can stack from a spell.
+        player.defendTurns = 1;
+        actionBanner = "GUARD";
+        addLog("> PLAYER DEFENDED");
+        addLog("> NEXT ENEMY PHASE HEAVILY REDUCED");
+    }
+
+    else if (action === "HEAL") {
+        if (player.healUses <= 0) {
+            addLog("> NO HEAL CHARGES LEFT");
+            return;
+        }
+
+        player.healUses--;
+        const healAmount = floor(random(20, 31));
+        actionBanner = "HEAL";
+        healPlayer(healAmount);
+        addLog(`> HEALS LEFT: ${player.healUses}`);
+    }
+
+    if (allEnemiesDefeated()) {
+        finishEncounterOrAdvance();
+        return;
+    }
+
+    queueEnemyPhase();
+}
+
+function handleSpellAction(spellName) {
+    processPlayerStartOfTurnEffects();
+    if (allEnemiesDefeated()) {
+        finishEncounterOrAdvance();
+        return;
+    }
+
+    const target = getActiveEnemy();
+    if (!target) return;
+
+    if (spellName === "FIREBLAST") {
+        const hit = random() < 0.9;
+        attackEffectTimer = 20;
+        attackEffectType = "SPELL";
+        actionBanner = "FIREBLAST";
+        addLog("> PLAYER CAST FIREBLAST");
+
+        if (hit) {
+            const dmg = floor(random(12, 20));
+            damageEnemy(target, dmg, "> FIRE HIT");
+            if (target.alive) {
+                target.burnTurns = 2;
+                addLog(`> ${target.name} BURNING FOR 2 TURNS`);
+            }
+        } else {
+            addLog("> SPELL MISSED");
+        }
+    }
+
+    else if (spellName === "WEAKEN") {
+        attackEffectTimer = 18;
+        attackEffectType = "SPELL";
+        actionBanner = "WEAKEN";
+        target.weakTurns = 3;
+        addLog("> PLAYER CAST WEAKEN");
+        addLog(`> ${target.name} ATTACK DOWN FOR 3 TURNS`);
+    }
+
+    else if (spellName === "BARRIER") {
+        attackEffectTimer = 18;
+        attackEffectType = "BARRIER";
+        actionBanner = "BARRIER";
+        player.barrierTurns = 2;
+        addLog("> PLAYER CAST BARRIER");
+        addLog("> DEFENSE BOOSTED FOR 2 ENEMY PHASES");
+    }
+
+    else if (spellName === "STARFALL") {
+        attackEffectTimer = 16;
+        attackEffectType = "CHARGE";
+        actionBanner = "CHARGE";
+        player.pendingSpell = "STARFALL";
+        addLog("> PLAYER BEGINS STARFALL");
+        addLog("> SPELL WILL LAND NEXT TURN");
+    }
+
+    if (allEnemiesDefeated()) {
+        finishEncounterOrAdvance();
+        return;
+    }
+
+    queueEnemyPhase();
+}
+
+function handleEnemyTurnSequence() {
+    const livingEnemies = getLivingEnemies();
+
+    for (let i = 0; i < livingEnemies.length; i++) {
+        const enemy = livingEnemies[i];
+
+        // Damage-over-time effects tick right before that enemy acts.
+        // This creates a nice tactical loop because FIREBLAST can interrupt or finish enemies off.
+        processEnemyStatusEffects(enemy);
+        if (!enemy.alive) continue;
+
+        performEnemyAction(enemy);
+
+        if (gameState === "LOSE") {
+            return;
+        }
+    }
+
+    // Defend and barrier are enemy-phase protections.
+    // They both tick down after the whole enemy phase is finished.
+    if (player.defendTurns > 0) player.defendTurns--;
+    if (player.barrierTurns > 0) player.barrierTurns--;
+}
+
+function performEnemyAction(enemy) {
+    addLog(`> ${enemy.name} INITIATED TURN`);
+
+    let dmg = floor(random(enemy.minDamage, enemy.maxDamage + 1));
+
+    // Level 2 behavior gets a little more interesting.
+    // Ogres sometimes charge a heavier attack, dragons can spit flame.
+    if (enemy.type === "OGRE") {
+        if (enemy.chargingHeavy) {
+            dmg += 8;
+            enemy.chargingHeavy = false;
+            addLog(`> ${enemy.name} USES CRUSHING BLOW`);
+        } else if (currentLevel >= 2 && random() < 0.25) {
+            enemy.chargingHeavy = true;
+            addLog(`> ${enemy.name} IS WINDING UP`);
+            return;
+        }
+    }
+
+    if (enemy.type === "DRAGON" && currentLevel >= 2 && random() < 0.3) {
+        dmg += 4;
+        addLog(`> ${enemy.name} BREATHES FIRE`);
+    }
+
+    if (enemy.weakTurns > 0) {
+        dmg = max(1, floor(dmg * 0.7));
+        addLog(`> ${enemy.name} WEAKENED`);
+    }
+
+    // Defend is now much more meaningful.
+    // Defend cuts most of the damage, and barrier stacks on top for even more protection.
+    if (player.defendTurns > 0) {
+        dmg = max(1, floor(dmg * 0.25));
+        addLog("> DEFEND ABSORBED MOST OF THE HIT");
+    }
+
+    if (player.barrierTurns > 0) {
+        dmg = max(1, floor(dmg * 0.65));
+        addLog("> BARRIER REDUCED DAMAGE FURTHER");
+    }
+
+    player.hp -= dmg;
+    playerFlashTimer = 12;
+    addLog("> PLAYER HIT");
+    addLog(`> PLAYER -${dmg} HP`);
+
     if (player.hp <= 0) {
         player.lives -= 1;
 
         if (player.lives <= 0) {
-            player.hp = 0; // Ensure HP doesn't go negative for display purposes
-            gameState = "LOSE"; // lose state, game over :(
-            return; // we return here to avoid any further processing since the game is already lost
-            } else {
-            // If the player still has lives, restore some HP and continue
-            addLog("> LIFE LOST"); // life lost :'(
-            addLog("> PLAYER REBOOTS"); // Log the reboot for player clarity and thematic flavor
-            player.hp = 60; // Restore some HP for the next life (we can adjust this value for balance later)
+            player.hp = 0;
+            gameState = "LOSE";
+            return;
+        } else {
+            addLog("> LIFE LOST");
+            addLog("> PLAYER REBOOTS");
+            player.hp = 60;
+            player.defendTurns = 0;
+            player.barrierTurns = 0;
+            player.pendingSpell = null;
         }
     }
 }
 
 function addLog(message) {
-    // Add new message to the top of the combat log
     combatLog.unshift(message);
 
-    // Keep only the newest few lines visible
     if (combatLog.length > 6) {
         combatLog.pop();
+    }
+}
+
+// --------------------------------------------------
+// SAFE IMAGE DRAWING
+// --------------------------------------------------
+
+function drawImageSafe(img, x, y, w, h) {
+    if (img) {
+        image(img, x, y, w, h);
+    } else {
+        fill(TEAL);
+        rect(x, y, w, h);
+        fill(LIGHT);
+        textSize(12);
+        text("MISSING", x + 10, y + 10);
     }
 }
 
@@ -490,64 +754,33 @@ function addLog(message) {
 // DRAWING: TITLE SCREEN
 // --------------------------------------------------
 
-function drawImageSafe(img, x, y, w, h) {
-    // again lowkey having so much trouble loading and displaying images, 
-    // so this is a helper function to draw images that checks if the image loaded successfully 
-    // before trying to draw it, and if not it will draw a placeholder rectangle 
-    // and log an error message instead of breaking the sketch with a runtime error
-    if (img) {
-        image(img, x, y, w, h);
-    } else {
-        // fallback placeholder so the sketch still runs
-        fill(80);
-        rect(x, y, w, h);
-    }
-}
-
 function drawTitleScreen() {
-    // Draw the terminal frame and title text :)
     drawTerminalFrame();
 
-    // Title
     fill(GOLD);
     textAlign(CENTER, TOP);
-    textSize(34);
-    text("CRASH OF CAMPAIGNS", width / 2, 35); // Game title centered at the top of the screen
+    textSize(32);
+    text("CRASH OF CAMPAIGNS", width / 2, 60);
 
-    // Decorative line 
-    stroke(TEAL);
-    line(50, 85, width - 50, 85); // Draw a line under the title for separation
-    noStroke();
-
-    // Subtitle / enemy selector
     fill(LIGHT);
     textSize(16);
-    text("SELECT ENEMY WITH A/D OR LEFT/RIGHT", width / 2, 115); //  Instruction for enemy selection
+    text(`ENEMY PREVIEW: ${selectedEnemyType}`, width / 2, 150);
 
-    // Current enemy display
-    fill(BRIGHT_TEAL);
-    textSize(22);
-    text(`CURRENT ENEMY: ${selectedEnemyType}`, width / 2, 150); // Show the currently selected enemy type for clarity
-
-    // Menu options
     textAlign(LEFT, TOP);
     textSize(22);
 
     for (let i = 0; i < titleOptions.length; i++) {
-        // Highlight the currently selected menu option
         if (i === titleMenuIndex) {
-        fill(BRIGHT_TEAL); 
-        text("> " + titleOptions[i] + "_", 60, 240 + i * 52); // Add an underscore cursor to the selected option for clarity
+            fill(BRIGHT_TEAL);
+            text("> " + titleOptions[i] + "_", 60, 240 + i * 52);
         } else {
-        fill(TEAL);
-        text("> " + titleOptions[i], 60, 240 + i * 52); // Non-selected options are a different color and have no cursor
+            fill(TEAL);
+            text("> " + titleOptions[i], 60, 240 + i * 52);
         }
     }
 
-    // Draw the knight sprite on the title screen for some visual interest and to show off the player character,
     drawImageSafe(knightImg, 500, 250, 95, 135);
 
-    // Footer
     fill(LIGHT);
     textSize(14);
     text("ENTER TO SELECT", 60, 410);
@@ -558,8 +791,6 @@ function drawTitleScreen() {
 // --------------------------------------------------
 
 function drawInstructionsScreen() {
-    // copy-pasting the terminal frame and header from the title screen for consistency, 
-    // then we'll add the instructions text below
     drawTerminalFrame();
 
     fill(GOLD);
@@ -573,33 +804,29 @@ function drawInstructionsScreen() {
 
     fill(LIGHT);
     textAlign(LEFT, TOP);
-    textSize(18);
+    textSize(16);
 
     const instructions = [
-        // These are just placeholder instructions based on the current prototype features, 
-        // a lot of these are TBD but we can expand and modify em as we add more mechanics and features to the game :)
-        "THIS IS A TURN-BASED COMBAT PROTOTYPE.",
+        "TURN-BASED COMBAT PROTOTYPE.",
         "",
-        "GOAL:",
-        "DEFEAT THE ENEMY BEFORE YOU RUN OUT OF HP AND LIVES.",
-        "",
-        "CONTROLS:",
+        "BATTLE CONTROLS:",
         "W/S OR UP/DOWN  -> MOVE CURSOR",
         "ENTER           -> CONFIRM CHOICE",
-        "A/D OR LEFT/RIGHT ON TITLE -> CHANGE ENEMY",
+        "ESC             -> CLOSE SPELL MENU",
+        "A/D OR LEFT/RIGHT -> SWITCH TARGET IN MULTI-ENEMY BATTLES",
         "",
         "COMMANDS:",
         "ATTACK  -> RELIABLE DAMAGE",
-        "DEFEND  -> REDUCES NEXT ENEMY HIT",
-        "SPELL   -> HIGHER DAMAGE, SMALL MISS CHANCE",
+        "DEFEND  -> GREATLY REDUCES NEXT ENEMY PHASE",
+        "SPELL   -> OPEN SPELL SUBMENU",
+        "HEAL    -> RESTORE HP, BUT LIMITED USES",
         "",
+        "LEVEL 2 INCLUDES MULTIPLE ENEMIES.",
         "PRESS ENTER TO RETURN"
     ];
 
     for (let i = 0; i < instructions.length; i++) {
-        // We add an underscore cursor to the last instruction to indicate that the player can press Enter to return, 
-        // but we could also consider adding a blinking effect or something, but thats a later problem :P
-        text(instructions[i], 60, 120 + i * 22);
+        text(instructions[i], 45, 110 + i * 22);
     }
 }
 
@@ -608,10 +835,6 @@ function drawInstructionsScreen() {
 // --------------------------------------------------
 
 function drawBattleScreen() {
-    // The battle screen is the most complex, 
-    // since it has a lot of different elements to draw - the terminal frame, 
-    // the HUD with player/enemy stats, the battle scene with characters and effects, 
-    // the menu options, and the combat log.
     drawTerminalFrame();
     drawBattleHud();
     drawBattleSceneDivider();
@@ -619,100 +842,153 @@ function drawBattleScreen() {
     drawAttackEffect();
     drawBattleMenu();
     drawCombatLog();
+    drawStatusBanner();
 }
 
 function drawBattleHud() {
-    // HUD background
     fill(GOLD);
     textAlign(LEFT, TOP);
     textSize(20);
-    text("LEVEL ONE", 20, 12);
+    text(`LEVEL ${currentLevel}`, 20, 12);
 
     fill(LIGHT);
-    text(`HP:${player.hp}`, 235, 12); // Player HP display in the center of the HUD
-    text(`LIVES:${player.lives}`, 360, 12); // Player lives display on the right side of the HUD
+    text(`HP:${player.hp}/${player.maxHp}`, 180, 12);
+    text(`LIVES:${player.lives}`, 360, 12);
+    text(`HEALS:${player.healUses}`, 500, 12);
 
-    // Decorative line to separate the HUD from the battle scene
     stroke(TEAL);
     line(0, 42, width, 42);
     noStroke();
 }
 
 function drawBattleSceneDivider() {
-    // Simple line to visually separate the battle scene from the menu and log below
     stroke(TEAL);
     line(0, 220, width, 220);
     noStroke();
 }
 
 function drawBattleCharacters() {
-    // Draw enemy label and HP text
+    const playerHitFlash = playerFlashTimer > 0 && frameCount % 6 < 3;
+
     fill(TEAL);
     textAlign(LEFT, TOP);
     textSize(18);
-    text(enemy.name, 24, 58);
-    text(`HP:${enemy.hp}`, 24, 82);
+    text(player.name, 45, 78);
 
-    // Flash effect while taking damage
-    const playerHitFlash = playerFlashTimer > 0 && frameCount % 6 < 3;
-    const enemyHitFlash = enemyFlashTimer > 0 && frameCount % 6 < 3;
-
-    // --------------------------------------------
-    // Draw player sprite
-    // --------------------------------------------
     push();
-
-    // If flashing, slightly tint the sprite brighter by using tint
     if (playerHitFlash) {
         tint(255, 180);
     } else {
         noTint();
     }
-
-    // Adjust these numbers if your asset sizes differ
     drawImageSafe(knightImg, 45, 105, 110, 110);
-
     pop();
 
-    // --------------------------------------------
-    // Draw enemy sprite
-    // --------------------------------------------
-    push();
+    // Strong visual indicator when defending or protected by barrier.
+    if (player.defendTurns > 0 || player.barrierTurns > 0) {
+        noFill();
+        stroke(player.defendTurns > 0 ? GREEN : PURPLE);
+        strokeWeight(3);
+        rect(38, 98, 124, 124);
+        strokeWeight(1);
+        noStroke();
 
-    if (enemyHitFlash) {
-        tint(255, 180);
-    } else {
-        noTint();
+        fill(player.defendTurns > 0 ? GREEN : PURPLE);
+        textSize(14);
+        text(player.defendTurns > 0 ? "GUARDING" : "BARRIER", 36, 228);
     }
 
-    if (enemy.type === "DRAGON") {
-        drawImageSafe(dragonImg, 360, 70, 230, 170);
-    } else {
-        drawImageSafe(ogreImg, 410, 75, 180, 180);
-    }
+    // Draw enemies.
+    for (let i = 0; i < enemies.length; i++) {
+        const enemy = enemies[i];
+        if (!enemy.alive) continue;
 
-    pop();
+        const isTargeted = i === activeTargetIndex;
+        const enemyHitFlash = enemy.flashTimer > 0 && frameCount % 6 < 3;
+
+        let drawX = i === 0 ? 320 : 455;
+        let drawY = i === 0 ? 78 : 96;
+        let drawW = enemy.type === "DRAGON" ? 165 : 135;
+        let drawH = enemy.type === "DRAGON" ? 130 : 135;
+
+        fill(TEAL);
+        textSize(16);
+        text(enemy.name, drawX, 58);
+        text(`HP:${enemy.hp}`, drawX, 78);
+
+        if (enemy.burnTurns > 0) {
+            fill(ORANGE);
+            text(`BURN:${enemy.burnTurns}`, drawX, 96);
+        }
+
+        if (enemy.weakTurns > 0) {
+            fill(PURPLE);
+            text(`WEAK:${enemy.weakTurns}`, drawX, 112);
+        }
+
+        push();
+        if (enemyHitFlash) {
+            tint(255, 180);
+        } else {
+            noTint();
+        }
+
+        if (enemy.type === "DRAGON") {
+            drawImageSafe(dragonImg, drawX, drawY + 24, drawW, drawH);
+        } else {
+            drawImageSafe(ogreImg, drawX, drawY + 18, drawW, drawH);
+        }
+        pop();
+
+        if (isTargeted) {
+            noFill();
+            stroke(GOLD);
+            strokeWeight(3);
+            rect(drawX - 8, drawY + 8, drawW + 16, drawH + 16);
+            strokeWeight(1);
+            noStroke();
+            fill(GOLD);
+            text("> TARGET <", drawX, drawY + drawH + 32);
+        }
+    }
 }
 
 function drawBattleMenu() {
     textAlign(LEFT, TOP);
     textSize(16);
 
-    for (let i = 0; i < battleOptions.length; i++) {
-        // Calculate y position for each menu option based on its index
-        const y = 250 + i * 28;
+    if (battleScreenMode === "COMMAND") {
+        for (let i = 0; i < battleOptions.length; i++) {
+            const y = 248 + i * 26;
 
-        // Highlight the currently selected menu option and add an underscore cursor for clarity, but only if we're not waiting for the enemy turn to start (enemyTurnTimer === 0) to prevent confusion about when the player can actually select an option
-        if (i === battleMenuIndex && enemyTurnTimer === 0) {
-            fill(GOLD);
-            text("> " + battleOptions[i] + "_", 24, y); // Add an underscore cursor to the selected option for clarity
-        } else {
-            fill(LIGHT);
-            text("> " + battleOptions[i], 24, y); // Non-selected options are a different color and have no cursor
+            if (i === battleMenuIndex && enemyTurnTimer === 0) {
+                fill(GOLD);
+                text("> " + battleOptions[i] + "_", 24, y);
+            } else {
+                fill(LIGHT);
+                text("> " + battleOptions[i], 24, y);
+            }
         }
+    } else {
+        fill(GOLD);
+        text("SPELL BOOK", 24, 248);
+
+        for (let i = 0; i < spellOptions.length; i++) {
+            const y = 276 + i * 22;
+
+            if (i === spellMenuIndex) {
+                fill(PURPLE);
+                text("> " + spellOptions[i] + "_", 24, y);
+            } else {
+                fill(LIGHT);
+                text("> " + spellOptions[i], 24, y);
+            }
+        }
+
+        fill(TEAL);
+        text("ESC TO CANCEL", 24, 372);
     }
 
-    // Show status while waiting for enemy turn
     if (enemyTurnTimer > 0) {
         fill(BRIGHT_TEAL);
         text("> ENEMY THINKING...", 24, 340);
@@ -722,11 +998,24 @@ function drawBattleMenu() {
 function drawCombatLog() {
     fill(GOLD);
     textAlign(LEFT, TOP);
-    textSize(16);
+    textSize(15);
 
-    // Display newest log at top of the log area
     for (let i = 0; i < combatLog.length; i++) {
-        text(combatLog[i], 24, 380 + i * 18); // Log messages are spaced 18 pixels apart vertically
+        text(combatLog[i], 250, 320 + i * 20);
+    }
+}
+
+function drawStatusBanner() {
+    fill(TEAL);
+    textAlign(LEFT, TOP);
+    textSize(14);
+
+    if (player.pendingSpell === "STARFALL") {
+        text("PENDING: STARFALL", 24, 390);
+    }
+
+    if (actionBanner !== "") {
+        text(`LAST ACTION: ${actionBanner}`, 24, 412);
     }
 }
 
@@ -735,72 +1024,61 @@ function drawCombatLog() {
 // --------------------------------------------------
 
 function drawWinScreen() {
-    // win screen :)
     drawTerminalFrame();
-    
-    // top bar
+
     fill(GOLD);
     textAlign(LEFT, TOP);
     textSize(20);
-    text("LEVEL ONE", 20, 12);
-    
+    text("ALL LEVELS CLEARED", 20, 12);
+
     fill(LIGHT);
-    text("HP:" + player.hp, 235, 12);
-    text("LIVES:" + player.lives, 360, 12);
-    
-    // decorative divider line
+    text(`HP:${player.hp}`, 260, 12);
+    text(`LIVES:${player.lives}`, 420, 12);
+
     stroke(TEAL);
     line(0, 42, width, 42);
     noStroke();
-    
-    // main body
+
     textAlign(CENTER, CENTER);
-    text("LEVEL ONE", width / 2, height / 2 - 60);
-    
+    fill(GOLD);
+    textSize(24);
+    text("VICTORY", width / 2, height / 2 - 60);
+
     fill(LIGHT);
     textSize(16);
-    text("YOU DEFEATED THE DRAGON", width / 2, height / 2 - 20);
-    
-    // extra options (purely visual/for the vibes for now)
+    text("YOU SURVIVED BOTH ENCOUNTERS", width / 2, height / 2 - 18);
+
     fill(TEAL);
-    text("> ADVANCE TO LEVEL 2", width / 2, height / 2 + 20);
-    text("> QUIT", width / 2, height / 2 + 50);
+    text("> PRESS ENTER FOR TITLE", width / 2, height / 2 + 32);
 }
 
 function drawLoseScreen() {
-    // lose screen :(
     drawTerminalFrame();
-    
-    // top bar
+
     fill(GOLD);
     textAlign(LEFT, TOP);
     textSize(20);
-    text("LEVEL ONE", 20, 12);
-    
+    text(`LEVEL ${currentLevel}`, 20, 12);
+
     fill(LIGHT);
-    text("HP:" + player.hp, 235, 12); // should be zero but just in case :)
-    text("LIVES:" + player.lives, 360, 12);
-    
-    // decorative divider line
+    text(`HP:${player.hp}`, 260, 12);
+    text(`LIVES:${player.lives}`, 420, 12);
+
     stroke(TEAL);
     line(0, 42, width, 42);
     noStroke();
-    
-    // main body
+
     textAlign(CENTER, CENTER);
-    
     fill(GOLD);
     textSize(24);
-    text("LEVEL ONE", width / 2, height / 2 - 60);
-    
+    text("DEFEAT", width / 2, height / 2 - 60);
+
     fill(LIGHT);
     textSize(16);
-    text("YOU LOST", width / 2, height / 2 - 20);
-    
-    // extra options (also just visual for now)
+    text("YOUR PARTY HAS FALLEN", width / 2, height / 2 - 18);
+
     fill(TEAL);
-    text("> RESTART", width / 2, height / 2 + 20);
-    text("> QUIT", width / 2, height / 2 + 50);
+    text("> PRESS ENTER TO RESTART", width / 2, height / 2 + 32);
 }
 
 // --------------------------------------------------
@@ -811,19 +1089,39 @@ function drawAttackEffect() {
     if (attackEffectTimer <= 0) return;
 
     push();
-
-    // Slight flicker effect for more visual energy
     const offsetX = random(-2, 2);
     const offsetY = random(-2, 2);
 
     if (attackEffectType === "ATTACK") {
-        // Slash image between player and enemy
-        drawImageSafe(attackImg, 245 + offsetX, 115 + offsetY, 110, 110);
+        drawImageSafe(attackImg, 220 + offsetX, 120 + offsetY, 105, 105);
     }
 
     if (attackEffectType === "SPELL") {
-        // Spell image between player and enemy
-        drawImageSafe(spellImg, 255 + offsetX, 100 + offsetY, 95, 95);
+        drawImageSafe(spellImg, 225 + offsetX, 115 + offsetY, 95, 95);
+    }
+
+    if (attackEffectType === "BARRIER") {
+        noFill();
+        stroke(PURPLE);
+        strokeWeight(4);
+        ellipse(98, 158, 120, 140);
+        strokeWeight(1);
+        noStroke();
+    }
+
+    if (attackEffectType === "CHARGE") {
+        fill(PURPLE);
+        ellipse(260 + offsetX, 125 + offsetY, 26, 26);
+        ellipse(290 + offsetX, 110 + offsetY, 14, 14);
+        ellipse(310 + offsetX, 140 + offsetY, 18, 18);
+    }
+
+    if (attackEffectType === "STARFALL") {
+        fill(GOLD);
+        ellipse(280 + offsetX, 95 + offsetY, 18, 18);
+        ellipse(295 + offsetX, 120 + offsetY, 12, 12);
+        ellipse(310 + offsetX, 145 + offsetY, 16, 16);
+        ellipse(325 + offsetX, 170 + offsetY, 10, 10);
     }
 
     pop();
@@ -834,26 +1132,9 @@ function drawAttackEffect() {
 // --------------------------------------------------
 
 function drawTerminalFrame() {
-    // draw the basic terminal frame - a simple rectangle with a border for now, but we can add more details and decorations later to make it look cooler and more unique
     background(BG);
-
-    // You can expand this later with scanlines or texture.
     stroke(TEAL);
     noFill();
     rect(1, 1, width - 2, height - 2);
     noStroke();
-}
-
-// --------------------------------------------------
-// HELPER "TINT" APPROXIMATION
-// Since these are vector shapes, this just changes fill behavior
-// by using alternate colors rather than actual image tinting.
-// --------------------------------------------------
-
-function tintStyleFill(colorValue) {
-    fill(colorValue);
-}
-
-function noTintStyle() {
-     // Placeholder helper to keep the structure readable
 }
