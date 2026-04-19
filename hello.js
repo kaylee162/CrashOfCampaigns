@@ -778,12 +778,8 @@ function drawTitleScreen() {
             text("> " + titleOptions[i], 60, 240 + i * 52);
         }
     }
-
-    drawImageSafe(knightImg, 500, 250, 95, 135);
-
-    fill(LIGHT);
-    textSize(14);
-    text("ENTER TO SELECT", 60, 410);
+    
+    drawImageSafe(knightImg, 460, 220, 120, 140);
 }
 
 // --------------------------------------------------
@@ -900,56 +896,62 @@ function drawBattleCharacters() {
 
     // Draw enemies.
     for (let i = 0; i < enemies.length; i++) {
-        const enemy = enemies[i];
-        if (!enemy.alive) continue;
+      const enemy = enemies[i];
+      if (!enemy.alive) continue;
+      
+      const isTargeted = i === activeTargetIndex;
+      const enemyHitFlash = enemy.flashTimer > 0 && frameCount % 6 < 3;
+      let drawX = i === 0 ? 320 : 455;
+      
+      let drawW = enemy.type === "DRAGON" ? 165 : 135;
+      let drawH = enemy.type === "DRAGON" ? 130 : 135;
 
-        const isTargeted = i === activeTargetIndex;
-        const enemyHitFlash = enemy.flashTimer > 0 && frameCount % 6 < 3;
+    // --- TEXT ---
+    fill(TEAL);
+    textSize(16);
+    text(enemy.name, drawX, 58);
+    text(`HP:${enemy.hp}`, drawX, 78);
 
-        let drawX = i === 0 ? 320 : 455;
-        let drawY = i === 0 ? 78 : 96;
-        let drawW = enemy.type === "DRAGON" ? 165 : 135;
-        let drawH = enemy.type === "DRAGON" ? 130 : 135;
+    if (enemy.burnTurns > 0) {
+        fill(ORANGE);
+        text(`BURN:${enemy.burnTurns}`, drawX, 96);
+    }
 
-        fill(TEAL);
-        textSize(16);
-        text(enemy.name, drawX, 58);
-        text(`HP:${enemy.hp}`, drawX, 78);
+    if (enemy.weakTurns > 0) {
+        fill(PURPLE);
+        text(`WEAK:${enemy.weakTurns}`, drawX, 112);
+    }
 
-        if (enemy.burnTurns > 0) {
-            fill(ORANGE);
-            text(`BURN:${enemy.burnTurns}`, drawX, 96);
-        }
+    // --- IMAGE ---
+    let imageY = enemy.type === "DRAGON" ? 78 + 24 : 78 + 18;
 
-        if (enemy.weakTurns > 0) {
-            fill(PURPLE);
-            text(`WEAK:${enemy.weakTurns}`, drawX, 112);
-        }
+    push();
+    if (enemyHitFlash) {
+        tint(255, 180);
+    } else {
+        noTint();
+    }
 
-        push();
-        if (enemyHitFlash) {
-            tint(255, 180);
-        } else {
-            noTint();
-        }
+    if (enemy.type === "DRAGON") {
+        drawImageSafe(dragonImg, drawX, imageY, drawW, drawH);
+    } else {
+        drawImageSafe(ogreImg, drawX, imageY, drawW, drawH);
+    }
+    pop();
 
-        if (enemy.type === "DRAGON") {
-            drawImageSafe(dragonImg, drawX, drawY + 24, drawW, drawH);
-        } else {
-            drawImageSafe(ogreImg, drawX, drawY + 18, drawW, drawH);
-        }
-        pop();
-
-        if (isTargeted) {
-            noFill();
-            stroke(GOLD);
-            strokeWeight(3);
-            rect(drawX - 8, drawY + 8, drawW + 16, drawH + 16);
-            strokeWeight(1);
-            noStroke();
-            fill(GOLD);
-            text("> TARGET <", drawX, drawY + drawH + 32);
-        }
+    // --- TARGET ARROW ---
+    if (isTargeted) {
+      fill(GOLD);
+      noStroke();
+      // small floating triangle above the enemy we're actively fighting
+     let floatOffset = sin(frameCount * 0.1) * 3;
+     
+     triangle(
+     drawX + drawW / 2 - 6, imageY - 16 + floatOffset,
+     drawX + drawW / 2 + 6, imageY - 16 + floatOffset,
+     drawX + drawW / 2,     imageY - 4 + floatOffset
+     );
+      }
     }
 }
 
@@ -991,7 +993,7 @@ function drawBattleMenu() {
 
     if (enemyTurnTimer > 0) {
         fill(BRIGHT_TEAL);
-        text("> ENEMY THINKING...", 24, 340);
+        text("> ENEMY THINKING...", 24, 370);
     }
 }
 
