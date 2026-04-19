@@ -324,49 +324,25 @@ This version represents the initial working combat prototype with a simple and f
 
 This version significantly expands the combat system, introducing more strategic gameplay, multiple enemies, and deeper mechanics.
 
-**Major Improvements:**
-
-**Expanded Combat System**
-- Added **HEAL** command with limited uses
-- Improved **DEFEND** to significantly reduce incoming damage
-- Introduced a **SPELL submenu** instead of a single spell action
-
-**New Spell Mechanics**
-- Multiple spells with unique behaviors:
+**Key Features:**
+- Expanded Combat System
+- Added **HEAL** command with limited uses (max 3)
+- Improved **DEFEND** to significantly reduce incoming damage from enemy
+- Introduced a **SPELL submenu** with mutliple different spell actions: 
   - **FIREBLAST** (damage + burn over time)
   - **WEAKEN** (enemy attack debuff)
   - **BARRIER** (temporary defense buff)
   - **STARFALL** (multi-turn delayed attack)
-- Added support for:
-  - Damage-over-time effects (burn)
-  - Temporary stat changes (weaken, barrier)
-
-**Multi-Enemy Combat**
-- Added **Level 2** with multiple enemies on screen
-- Implemented **target switching** (left/right controls)
-- Added **target highlighting** for clarity
-
-**Improved Enemy Behavior**
-- Enemies can:
-  - Apply stronger attacks (e.g., charged hits)
-  - Use varied attack patterns
-- Status effects now influence enemy behavior and damage output
-
-**Visual & UI Enhancements**
-- Visual indicators for:
+- Added Level 2 with multiple enemies on screen
+- Implemented target switching for level 2 (left/right controls)
+- Added a target triangle for the targeted enemy (for visual clarity)
+- Improved Enemy Behavior
+- Added visual indicators for:
   - Defending (guard state)
   - Barrier effects
   - Active target selection
 - Expanded combat log for better feedback
 - Improved action banners and effect visuals
-
-**Gameplay Depth**
-- Introduced resource management (limited healing)
-- Encourages strategic decisions:
-  - When to defend vs attack
-  - When to heal vs save charges
-  - Which enemy to target first
-  - When to use multi-turn spells
 
 ---
 
