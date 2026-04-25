@@ -348,19 +348,25 @@ This version significantly expands the combat system, introducing more strategic
 
 ### Milestone 5
 
-This version is one of the last prototypes before the final prototype. 
+This version is one of the final prototype iterations and focuses on polish, balancing, usability, and improving the overall gameplay experience.
 
 **Key Features:**
-- 
+- Rebalanced combat so the game is now realistically winnable while preserving strategic gameplay
+- Tuned enemy health, damage ranges, and special attack frequency for fairer encounters
+- Level 2 now restores player health and resets heal charges to **3** upon entry
+- Added retro-style generated sound effects using the browser Web Audio API
+  - Attack sound effect
+  - Spell cast sound effects
+  - Heal sound effect
+  - Damage / hit sound effect
+- Maintained lightweight architecture with no external sound asset dependencies
 
 ### Need to Fix/Add for M05:
 
-- Add a spell log. When the user presses Left on D-pad inside the spell book, it opens a help command log
-that explains what the spell is and how it works
-- We could also add that to the other commands (attack, defend, & heal)
-- We also need to finetune the spells to make the work better
-- Clean up the instruction menu, and include the left d-pad thing
-- Reset health stats at the start of level 2 (so restarting lives & healing)
+- Add a spell help log when pressing Left inside the spell menu
+- Continue refining spell balance and combat pacing
+- Further polish the instructions screen layout and readability
+- Improve visual transitions between battle levels
 
 ## Author
 
