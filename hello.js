@@ -1,5 +1,5 @@
 /*
-    Crash of Campaigns - Prototype (V2) Dev Notes
+    Crash of Campaigns - Prototype (V3) Dev Notes
     ---------------------------------------------
 
     PROJECT OVERVIEW:
@@ -46,9 +46,13 @@
     - Targeted enemies get a gold selection box
     - Attack/spell effects briefly appear between combatants
 
-    KNOWN LIMITATIONS:
-    - The combat is still a bit simple and could use more enemy variety, player tools, and status effects
-    - We need to add some sound effects and music to really sell the atmosphere
+    THINGS TO ADD RN:
+    - Add a spell log. When the user presses Left on D-pad inside the spell book, it opens a help command log
+    that explains what the spell is and how it works
+    - We could also add that to the other commands (attack, defend, & heal)
+    - We also need to finetune the spells to make the work better
+    - Clean up the instruction menu, and include the left d-pad thing
+    - Reset health stats at the start of level 2 (so restarting lives & healing)
 */
 
 // --------------------------------------------------

@@ -346,6 +346,22 @@ This version significantly expands the combat system, introducing more strategic
 
 ---
 
+### Milestone 5
+
+This version is one of the last prototypes before the final prototype. 
+
+**Key Features:**
+- 
+
+### Need to Fix/Add for M05:
+
+- Add a spell log. When the user presses Left on D-pad inside the spell book, it opens a help command log
+that explains what the spell is and how it works
+- We could also add that to the other commands (attack, defend, & heal)
+- We also need to finetune the spells to make the work better
+- Clean up the instruction menu, and include the left d-pad thing
+- Reset health stats at the start of level 2 (so restarting lives & healing)
+
 ## Author
 
 Irem Erturk
