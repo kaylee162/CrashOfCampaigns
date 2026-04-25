@@ -4,8 +4,8 @@
 
     PROJECT OVERVIEW:
     This is a retro-styled turn-based battle prototype built in p5.js.
-    The game currently focuses on a simple but more tactical combat loop
-    with a title screen, instructions screen, battle flow, and win/lose states.
+    The game focuses on a tactical combat loop with multiple battle states,
+    menu-driven actions, progressive encounters, and lightweight retro polish.
 
     CURRENT GAMEPLAY FEATURES:
     - Title screen with enemy preview selection
@@ -22,37 +22,53 @@
     - Limited healing charges
     - Combat log for feedback
     - Win and lose screens
+    - Retro generated sound effects for combat actions
 
     COMBAT DESIGN NOTES:
-    - ATTACK is the basic reliable damage option
+    - ATTACK is the reliable direct damage option
     - DEFEND heavily reduces damage during the next enemy phase
-    - HEAL restores HP, but only a few times per run
-    - SPELL opens a submenu with more specialized tools:
+    - HEAL restores HP with limited uses per level cycle
+    - SPELL opens a submenu with specialized tools:
         FIREBLAST = direct damage + burn
-        WEAKEN    = lowers enemy damage for a few turns
+        WEAKEN    = lowers enemy damage for several turns
         BARRIER   = defensive buff for multiple enemy phases
         STARFALL  = delayed spell that lands on the next player turn
 
-    LEVEL STRUCTURE:
-    - LEVEL 1 starts with one selected enemy
-    - LEVEL 2 spawns both an ogre and a dragon at once
+    GENERAL NOTES ON BALANCE AND COMBAT STUFF:
+    - Combat values have been rebalanced so the game is now realistically winnable
+    - Enemy damage spikes were reduced without removing challenge
+    - Player attack and spell values were slightly improved
+    - Healing restores more HP than earlier versions
     - Clearing Level 1 automatically advances the player to Level 2
-    - Clearing Level 2 wins the game
+    - Entering Level 2 restores player HP and resets heal charges to 3
+    - Lives remain persistent between levels for progression stakes
+
+    LEVEL STRUCTURE:
+    - LEVEL 1 starts with one selected enemy, its pretty easy dont worry
+    - LEVEL 2 spawns both an ogre and a dragon at once, this is a bit more difficult
+      but i was able to beat it so its def possible
+    - Killing all the enemies in level 2 leads to teh final win state
 
     VISUAL / UI NOTES:
-    - The interface is kinda styled like a chunky retro terminal
-    - The important actions are shown in the combat log at the bottom
+    - The interface is styled like a chunky retro terminal
+    - Important actions are shown in the combat log at the bottom
     - Defensive effects have visible indicators around the player
-    - Targeted enemies get a gold selection box
+    - Targeted enemies get a gold triangel floating above them
     - Attack/spell effects briefly appear between combatants
+    - Audio feedback now plays during attacks, spells, healing, and damage
+
+    TECH NOTES:
+    - Sound effects are generated through the browser Web Audio API so theres 
+      no external sound files :)
+    - Audio begins on first player input for browser compatibility
+    - Core game remains lightweight and easy to run locally
 
     THINGS TO ADD RN:
-    - Add a spell log. When the user presses Left on D-pad inside the spell book, it opens a help command log
-    that explains what the spell is and how it works
-    - We could also add that to the other commands (attack, defend, & heal)
-    - We also need to finetune the spells to make the work better
-    - Clean up the instruction menu, and include the left d-pad thing
-    - Reset health stats at the start of level 2 (so restarting lives & healing)
+    - Add a spell help log when the user presses Left inside the spell menu
+    - We could also add some help text for ATTACK, DEFEND, and HEAL (maybe but i feel like
+      those are pretty self-explanatory)
+    - we def need to continue fine-tuning spell balance and pacing
+    - & clean up the instruction menu and controls messaging
 */
 
 // --------------------------------------------------
@@ -120,6 +136,67 @@ let attackEffectTimer = 0;
 
 // Stores what kind of attack effect should currently be drawn
 let attackEffectType = "";
+
+// --------------------------------------------------
+// SIMPLE GENERATED SOUND EFFECTS
+// --------------------------------------------------
+
+// These use the browser's built-in Web Audio API.
+// That means we do not need mp3/wav files or the p5.sound library.
+// The sounds are tiny retro-style blips that work well with the arcade vibe.
+let audioCtx = null;
+
+function ensureAudioStarted() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+}
+
+function playTone(freq, duration, type = "square", volume = 0.08) {
+    if (!audioCtx) return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+function playAttackSound() {
+    // short slashy arcade sound
+    playTone(240, 0.07, "square", 0.08);
+    setTimeout(() => playTone(160, 0.05, "square", 0.05), 45);
+}
+
+function playSpellSound() {
+    // brighter magical blip
+    playTone(440, 0.08, "triangle", 0.07);
+    setTimeout(() => playTone(660, 0.09, "triangle", 0.06), 55);
+}
+
+function playHealSound() {
+    // soft upward healing sound
+    playTone(330, 0.08, "sine", 0.06);
+    setTimeout(() => playTone(520, 0.1, "sine", 0.06), 70);
+}
+
+function playHitSound() {
+    // low damage thud
+    playTone(120, 0.08, "sawtooth", 0.07);
+}
 
 // small status label near the bottom
 let actionBanner = "";
@@ -292,10 +369,10 @@ function createEnemy(type, levelNumber) {
         return {
             type: "OGRE",
             name: levelNumber === 1 ? "OGRE" : "OGRE BRUTE",
-            hp: levelNumber === 1 ? 70 : 95, // a little more HP in Level 2 to keep the fight feeling tough without being overwhelming
-            maxHp: levelNumber === 1 ? 70 : 95, // maxHp is used for healing and UI, so it needs to be set separately from hp
-            minDamage: levelNumber === 1 ? 10 : 12, // the ogre is a bit stronger in Level 2, but not as much as the dragon
-            maxDamage: levelNumber === 1 ? 18 : 22, 
+            hp: levelNumber === 1 ? 65 : 80, // a little more HP in Level 2 to keep the fight feeling tough without being overwhelming
+            maxHp: levelNumber === 1 ? 65 : 80, // maxHp is used for healing and UI, so it needs to be set separately from hp
+            minDamage: levelNumber === 1 ? 8 : 9, // the ogre is a bit stronger in Level 2, but not as much as the dragon
+            maxDamage: levelNumber === 1 ? 15 : 17, 
             weakTurns: 0, // debuff duration
             burnTurns: 0, // damage-over-time duration
             flashTimer: 0, // hit flash visual
@@ -308,10 +385,10 @@ function createEnemy(type, levelNumber) {
     return {
         type: "DRAGON",
         name: levelNumber === 1 ? "DRAGON" : "DRAGON WARDEN",
-        hp: levelNumber === 1 ? 85 : 110, // the dragon is tougher in both levels, but especially in Level 2 where it has to be the star of the show
-        maxHp: levelNumber === 1 ? 85 : 110, // maxHp is used for healing and UI, so it needs to be set separately from hp
-        minDamage: levelNumber === 1 ? 12 : 14, // the dragon is stronger than the ogre in both levels, and gets a bigger boost in Level 2 to keep the fight feeling intense
-        maxDamage: levelNumber === 1 ? 20 : 24, 
+        hp: levelNumber === 1 ? 78 : 92, // the dragon is tougher in both levels, but especially in Level 2 where it has to be the star of the show
+        maxHp: levelNumber === 1 ? 78 : 92, // maxHp is used for healing and UI, so it needs to be set separately from hp
+        minDamage: levelNumber === 1 ? 10 : 11, // the dragon is stronger than the ogre in both levels, and gets a bigger boost in Level 2 to keep the fight feeling intense
+        maxDamage: levelNumber === 1 ? 17 : 19, 
         weakTurns: 0, // debuff duration
         burnTurns: 0, // damage-over-time duration
         flashTimer: 0, // hit flash visual
@@ -368,6 +445,9 @@ function draw() {
 // central keyboard router that sends input to the correct handler based on game state
 // each screen gets its own handler so the logic stays organized
 function keyPressed() {
+    // sound
+    ensureAudioStarted();
+
     if (gameState === "TITLE") {
         handleTitleInput();
     } else if (gameState === "INSTRUCTIONS") {
@@ -586,10 +666,22 @@ function queueEnemyPhase() {
 function finishEncounterOrAdvance() {
     if (currentLevel === 1) {
         addLog("> LEVEL ONE CLEARED");
+
         currentLevel = 2;
         setupLevel(2);
-        player.hp = min(player.maxHp, player.hp + 20);
-        addLog("> PLAYER STABILIZED +20 HP");
+
+        // level 2 is the real boss fight, so we refill the players core resources
+        // lives stay untouched so level 1 still matters, but the player gets back the healing
+        // and their hp points restored to 100. reset all the other stats too, like defend and barrier
+        player.hp = player.maxHp;
+        player.healUses = 3;
+        player.defendTurns = 0;
+        player.barrierTurns = 0;
+        player.pendingSpell = null;
+
+        //log the new level
+        addLog("> PLAYER FULLY STABILIZED");
+        addLog("> HEALS RESTORED TO 3");
         return;
     }
 
@@ -604,9 +696,10 @@ function processPlayerStartOfTurnEffects() {
     if (player.pendingSpell === "STARFALL") {
         const target = getActiveEnemy();
         if (target) {
-            const dmg = floor(random(18, 31));
+            const dmg = floor(random(26, 39));
             attackEffectTimer = 24;
             attackEffectType = "STARFALL";
+            playSpellSound();
             addLog("> STARFALL RESOLVES");
             damageEnemy(target, dmg, "> COSMIC IMPACT");
         }
@@ -654,10 +747,14 @@ function handlePlayerAction(action) {
 
     // each action type has its own block here to keep the logic separate and clear
     if (action === "ATTACK") {
-        const dmg = floor(random(8, 15));
+        const dmg = floor(random(12, 19));
         attackEffectTimer = 20;
         attackEffectType = "ATTACK";
         actionBanner = "SLASH";
+
+        // attack sound
+        playAttackSound();
+
         addLog("> PLAYER ATTACKED");
         damageEnemy(target, dmg);
     }
@@ -680,8 +777,12 @@ function handlePlayerAction(action) {
         }
 
         player.healUses--; // decrement the heal count before applying the heal so the log shows the updated count
-        const healAmount = floor(random(20, 31));
+        const healAmount = floor(random(28, 41));
         actionBanner = "HEAL";
+
+        // heal sound
+        playHealSound();
+
         healPlayer(healAmount);
         addLog(`> HEALS LEFT: ${player.healUses}`);
     }
@@ -715,9 +816,11 @@ function handleSpellAction(spellName) {
         attackEffectType = "SPELL";
         actionBanner = "FIREBLAST";
         addLog("> PLAYER CAST FIREBLAST");
+        // add soung
+        playSpellSound();
 
         if (hit) {
-            const dmg = floor(random(12, 20));
+            const dmg = floor(random(18, 27));
             damageEnemy(target, dmg, "> FIRE HIT");
             if (target.alive) {
                 target.burnTurns = 2;
@@ -735,9 +838,10 @@ function handleSpellAction(spellName) {
         attackEffectTimer = 18;
         attackEffectType = "SPELL";
         actionBanner = "WEAKEN";
-        target.weakTurns = 3;
+        playSpellSound();
+        target.weakTurns = 4;
         addLog("> PLAYER CAST WEAKEN");
-        addLog(`> ${target.name} ATTACK DOWN FOR 3 TURNS`);
+        addLog(`> ${target.name} ATTACK DOWN FOR 4 TURNS`);
     }
 
     // barrier is a defensive buff that reduces incoming damage for multiple enemy phases
@@ -745,9 +849,10 @@ function handleSpellAction(spellName) {
         attackEffectTimer = 18;
         attackEffectType = "BARRIER";
         actionBanner = "BARRIER";
-        player.barrierTurns = 2;
+        playSpellSound();
+        player.barrierTurns = 3; // lasts for 3 enemy phases
         addLog("> PLAYER CAST BARRIER");
-        addLog("> DEFENSE BOOSTED FOR 2 ENEMY PHASES");
+        addLog("> DEFENSE BOOSTED FOR 3 ENEMY PHASES");
     }
 
     // starfall is a powerful delayed spell that lands at the start of the player's next turn
@@ -755,6 +860,7 @@ function handleSpellAction(spellName) {
         attackEffectTimer = 16;
         attackEffectType = "CHARGE";
         actionBanner = "CHARGE";
+        playSpellSound();
         player.pendingSpell = "STARFALL";
         addLog("> PLAYER BEGINS STARFALL");
         addLog("> SPELL WILL LAND NEXT TURN");
@@ -807,10 +913,10 @@ function performEnemyAction(enemy) {
     // In Level 2 the ogre can sometimes spend a turn winding up for a stronger follow-up attack
     if (enemy.type === "OGRE") {
         if (enemy.chargingHeavy) {
-            dmg += 8;
+            dmg += 5; // the heavy attack does extra damage
             enemy.chargingHeavy = false;
             addLog(`> ${enemy.name} USES CRUSHING BLOW`);
-        } else if (currentLevel >= 2 && random() < 0.25) {
+        } else if (currentLevel >= 2 && random() < 0.18) {
             // the ogre starts charging, which doesn't do damage this turn but makes the next attack stronger
             // This adds a bit of unpredictability and forces the player to decide whether to defend against a possible heavy attack or risk taking a normal hit.
             enemy.chargingHeavy = true;
@@ -821,8 +927,8 @@ function performEnemyAction(enemy) {
 
     // Dragon behavior:
     // Occasionally adds extra fire damage in Level 2
-    if (enemy.type === "DRAGON" && currentLevel >= 2 && random() < 0.3) {
-        dmg += 4;
+    if (enemy.type === "DRAGON" && currentLevel >= 2 && random() < 0.2) {
+        dmg += 3; // the dragon's fire breath adds extra damage
         addLog(`> ${enemy.name} BREATHES FIRE`);
     }
 
@@ -847,6 +953,7 @@ function performEnemyAction(enemy) {
     // apply the damage to the player, trigger hit flash, and add log entries
     player.hp -= dmg;
     playerFlashTimer = 12;
+    playHitSound();
     addLog("> PLAYER HIT");
     addLog(`> PLAYER -${dmg} HP`);
 
@@ -1247,11 +1354,6 @@ function drawWinScreen() {
     textAlign(LEFT, TOP);
     textSize(20);
     text("ALL LEVELS CLEARED", 20, 12);
-
-    // player stats on teh right 
-    fill(LIGHT);
-    text(`HP:${player.hp}`, 260, 12);
-    text(`LIVES:${player.lives}`, 420, 12);
 
     // divider line under the HUD
     stroke(TEAL);
