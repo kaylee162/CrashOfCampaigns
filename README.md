@@ -3,7 +3,7 @@
 ## Overview
 Crash of Campaigns is a retro-inspired, terminal-style combat game built using **p5.js**. The current version is a playable prototype focused on a turn-based combat loop, menu-driven interactions, retro-styled visuals, and expanding tactical battle options.
 
-The project blends classic RPG-inspired combat with a stylized terminal aesthetic. This updated version builds on the original prototype by introducing stronger combat decision-making through healing, defense, buffs, debuffs, multi-turn spells, and a second level with multiple enemies on screen at once.
+The project blends classic RPG-inspired combat with a stylized terminal aesthetic. It features player combat decision-making through attacks, defending, healing, multi-turn spells, and it includes a second level with multiple enemies on screen at once. 
 
 ---
 
@@ -16,14 +16,14 @@ The project blends classic RPG-inspired combat with a stylized terminal aestheti
 - Target selection during multi-enemy encounters
 - Two-stage battle progression with escalating difficulty
 
-### Expanded Combat System
+### Combat System
 - **ATTACK** for reliable direct damage
-- **DEFEND** with significantly stronger damage reduction than before
-- **SPELL** submenu with multiple spell types
-- **HEAL** command with limited uses for balance and strategy
+- **DEFEND** sheilds player from direct damage
+- **SPELL** opens a spell submenu with multiple spell types
+- **HEAL** command that revives the player's HP, but is limited to 3 uses
 
 ### Spell Mechanics
-The combat system now includes multiple spell types with different effects:
+The combat system includes multiple spell types with different effects:
 
 - **FIREBLAST**  
   Deals direct damage and can apply a burn effect over time
@@ -241,52 +241,26 @@ Use a local server:
 
 Open `index.html` directly in a browser.
 
-This may still cause asset-loading issues depending on browser security settings, so a local server is the safer option.
+This may still cause asset-loading issues depending on browser security settings, so a local server is probably 
+the safer option.
 
 ---
 
 ## Current Gameplay Highlights
 
-* Stronger defend mechanic that now feels meaningful
+* Stronger defend mechanic that feels meaningful
 * Healing as a limited combat resource
 * Spell variety with more distinct roles
 * Multi-turn spell planning
 * Multi-enemy battles in level 2
 * Better visual feedback for combat states
-* More tactical decision-making than the earlier prototype
+* Sound effects for different menu actions
 
 ---
 
 ## Known Issues / Limitations
 
-* UI layout can still be refined further
-* Balancing for spells, healing, and enemy damage may need tuning
-* No sound or music yet
-* Combat visuals are still prototype-level
-* Enemy AI is improved but still intentionally simple
-
----
-
-## Roadmap
-
-### Next Core Improvements
-
-* Refine combat balance
-* Improve menu readability and polish
-* Add more spell and status effect interactions
-
-### Polish Goals
-
-* Smoother visual effects and animation timing
-* Cleaner layout and spacing
-* Improved transitions between levels and states
-
-### Stretch Goals
-
-* Sound effects and music
-* More levels and enemy combinations
-* Player progression / stat scaling
-* Sprite-based animation improvements
+None at the moment :)
 
 ---
 
@@ -301,9 +275,23 @@ This may still cause asset-loading issues depending on browser security settings
 
 ## Version History
 
+### Milestone 1
+
+This version was the idea creation stage. We developed the idea for the game and basic gameplay loops. 
+
+---
+
+### Milestone 2
+
+This version involved creating gamestate screen mockups and the user flow chart. We developed more of the 
+game idea and how exactly it was going to look for the user. Mockups were made in figma and we developed a 
+style guide for our game the held the colors, fonts, and layout. 
+
+--- 
+
 ### Milestone 3
 
-This version represents the initial working combat prototype with a simple and functional battle loop.
+This version was the initial working combat prototype with a simple and functional battle loop.
 
 **Key Features:**
 - Basic turn-based combat system
@@ -360,18 +348,15 @@ This version is one of the final prototype iterations and focuses on polish, bal
   - Heal sound effect
   - Damage / hit sound effect
 - Maintained lightweight architecture with no external sound asset dependencies
+- Add a spell help log when pressing h inside the spell menu
+- Refined spell balance and combat pacing
 
-### Need to Fix/Add for M05:
-
-- Add a spell help log when pressing Left inside the spell menu
-- Continue refining spell balance and combat pacing
-- Further polish the instructions screen layout and readability
-- Improve visual transitions between battle levels
+---
 
 ## Author
 
-Irem Erturk
-Kaylee Henry
+Irem Erturk  
+Kaylee Henry  
 Georgia Tech
 
 ---
