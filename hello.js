@@ -53,7 +53,7 @@
     - The interface is styled like a chunky retro terminal
     - Important actions are shown in the combat log at the bottom
     - Defensive effects have visible indicators around the player
-    - Targeted enemies get a gold triangel floating above them
+    - Targeted enemies get a gold triangle floating above them
     - Attack/spell effects briefly appear between combatants
     - Audio feedback now plays during attacks, spells, healing, and damage
 
@@ -397,6 +397,7 @@ function createEnemy(type, levelNumber) {
     };
 }
 
+
 // --------------------------------------------------
 // MAIN DRAW LOOP
 // --------------------------------------------------
@@ -519,8 +520,10 @@ function handleBattleInput() {
     // normal command menu movemen.
     if (keyCode === UP_ARROW || key === "w" || key === "W") {
         battleMenuIndex = max(0, battleMenuIndex - 1);
+        playTone(300, 0.03, "square", 0.04);
     } else if (keyCode === DOWN_ARROW || key === "s" || key === "S") {
         battleMenuIndex = min(battleOptions.length - 1, battleMenuIndex + 1);
+        playTone(300, 0.03, "square", 0.04);
     }
 
     // confirm the command
@@ -539,6 +542,11 @@ function handleBattleInput() {
 
 // handles input specifically inside the spell submenu
 function handleSpellMenuInput() {
+  // show spell help when pressing H
+  if (key === "h" || key === "H") {
+    showSpellHelp();
+    return;
+  }
     if (keyCode === UP_ARROW || key === "w" || key === "W") {
         spellMenuIndex = max(0, spellMenuIndex - 1);
     } else if (keyCode === DOWN_ARROW || key === "s" || key === "S") {
@@ -773,6 +781,8 @@ function handlePlayerAction(action) {
         // no heal spam allowed  
         if (player.healUses <= 0) {
             addLog("> NO HEAL CHARGES LEFT");
+            //error sound when you run out of heals
+            playTone(250, 0.07, "triangle", 0.06);
             return;
         }
 
@@ -991,6 +1001,35 @@ function addLog(message) {
     }
 }
 
+//yay spellbook!
+function showSpellHelp() {
+  const spell = spellOptions[spellMenuIndex];
+  //clear old logs 
+  combatLog =[];
+
+    if (spell === "FIREBLAST") {
+        addLog("> ~90% HIT CHANCE");
+        addLog("> +BURN (5 DAMAGE OVER 2 TURNS)");
+        addLog("> 18-26 DAMAGE");
+    } 
+    else if (spell === "WEAKEN") {
+        addLog("> NO DIRECT DAMAGE DEALT");
+        addLog("> LASTS 4 TURNS");
+        addLog("> REDUCES ENEMY DAMAGE BY 30%");
+    } 
+    else if (spell === "BARRIER") {
+        addLog("> STACKS W/ DEFEND");
+        addLog("> LASTS 3 ENEMY TURNS");
+        addLog("> REDUCES DAMAGE TAKEN BY 35%");
+    } 
+    else if (spell === "STARFALL") {
+        addLog("> ALWAYS HITS TARGET");
+        addLog("> DELAYED 1 TURN");
+        addLog("> HIGH DAMAGE, REQUIRES SETUP");
+        addLog("> 26-38 DAMAGE");
+    }
+}
+
 // --------------------------------------------------
 // SAFE IMAGE DRAWING
 // --------------------------------------------------
@@ -1085,8 +1124,10 @@ function drawInstructionsScreen() {
         "BATTLE CONTROLS:",
         "W/S OR UP/DOWN  -> MOVE CURSOR",
         "ENTER           -> CONFIRM CHOICE",
-        "ESC             -> CLOSE SPELL MENU",
-        "A/D OR LEFT/RIGHT -> SWITCH TARGET IN MULTI-ENEMY BATTLES",
+        "ESC             -> CLOSE SPELL SUBMENU",
+        "H               -> SPELL INFO (IN SPELL SUBMENU)",
+        "A/D OR LEFT/RIGHT -> SWITCH TARGET IN MULTI-ENEMY",
+        "BATTLES",
         "",
         "COMMANDS:",
         "ATTACK  -> RELIABLE DAMAGE",
@@ -1096,7 +1137,7 @@ function drawInstructionsScreen() {
         "",
         "LEVEL 2 INCLUDES MULTIPLE ENEMIES.",
         "PRESS ENTER TO RETURN"
-    ];
+        ];
 
     // draw each line of instructions with some spacing
     for (let i = 0; i < instructions.length; i++) {
@@ -1276,7 +1317,7 @@ function drawBattleMenu() {
 
             if (i === battleMenuIndex && enemyTurnTimer === 0) {
                 fill(GOLD);
-                text("> " + battleOptions[i] + "_", 24, y);
+                text("> " + battleOptions[i], 24, y);
             } else {
                 fill(LIGHT);
                 text("> " + battleOptions[i], 24, y);
@@ -1300,7 +1341,7 @@ function drawBattleMenu() {
         }
 
         fill(TEAL);
-        text("ESC TO CANCEL", 24, 372); // cancel prompt for speell menu
+        text("ESC: BACK | H: INFO", 24, 372); // cancel prompt for speell menu and hint for how to access spell info
     }
 
     // shown while waiting for the enemy phase to resolve
