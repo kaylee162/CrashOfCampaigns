@@ -1,5 +1,5 @@
 /*
-    Crash of Campaigns - Prototype (V3) Dev Notes
+    Crash of Campaigns - (final V) Dev Notes
     ---------------------------------------------
 
     PROJECT OVERVIEW:
@@ -19,10 +19,11 @@
     - Enemy status effects like burn and weaken
     - Player defensive states like defend and barrier
     - Multi-turn spell setup with STARFALL
+    - Spell log submenu with detailed spell descriptions and effects (press H)
     - Limited healing charges
     - Combat log for feedback
     - Win and lose screens
-    - Retro generated sound effects for combat actions
+    - Retro generated sound effects for combat actions 
 
     COMBAT DESIGN NOTES:
     - ATTACK is the reliable direct damage option
@@ -33,6 +34,8 @@
         WEAKEN    = lowers enemy damage for several turns
         BARRIER   = defensive buff for multiple enemy phases
         STARFALL  = delayed spell that lands on the next player turn
+    BTW these are accesible to the player inside the game if they press H while in the spell menu, 
+    so you can check out the exact numbers and effects while inside the game
 
     GENERAL NOTES ON BALANCE AND COMBAT STUFF:
     - Combat values have been rebalanced so the game is now realistically winnable
@@ -64,11 +67,8 @@
     - Core game remains lightweight and easy to run locally
 
     THINGS TO ADD RN:
-    - Add a spell help log when the user presses Left inside the spell menu
-    - We could also add some help text for ATTACK, DEFEND, and HEAL (maybe but i feel like
-      those are pretty self-explanatory)
-    - we def need to continue fine-tuning spell balance and pacing
-    - & clean up the instruction menu and controls messaging
+    honestly I think we have a pretty solid and feature-complete prototype here. There are a few 
+    thigns we could add for polish but I dont think its entirely neccessary
 */
 
 // --------------------------------------------------

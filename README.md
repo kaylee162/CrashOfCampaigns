@@ -353,6 +353,13 @@ This version is one of the final prototype iterations and focuses on polish, bal
 
 ---
 
+## Future Improvements
+
+* More levels with new enemies, some that are more powerful than the current ogre and drage
+* Adding more spells, that are more advanced than the current ones, to help defeat these more powerful enemies
+* Adding animation to the player and the enemies to make the game feel more alive
+* Adding some better sound effects, and adding a looping background sound 
+
 ## Author
 
 Irem Erturk  
